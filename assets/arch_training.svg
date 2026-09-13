@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="56 88 1038 248" font-family="Charter, Georgia, serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0.5 L 9 5 L 0 9.5 Z" fill="#2f2f2f"/>
+    </marker>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
+      <rect width="7" height="7" fill="#d5e4ef"/>
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#ffffff" stroke-width="2.4"/>
+    </pattern>
+    <g id="unit">
+      <!-- future a -->
+      <rect x="224" y="-190" width="110" height="46" rx="7" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="279" y="-158" font-size="19" fill="#2f2f2f" text-anchor="middle">Future <tspan font-style="italic">a</tspan></text>
+      <line x1="279" y1="-114" x2="279" y2="-136" stroke="#2f2f2f" stroke-width="1.4" marker-end="url(#arr)"/>
+
+      <!-- experts, edges flush with the tokens below -->
+      <rect x="0" y="-110" width="214" height="76" rx="10" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="107" y="-65" font-size="20" fill="#2f2f2f" text-anchor="middle">obs. expert</text>
+      <rect x="224" y="-110" width="110" height="76" rx="10" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="279" y="-76" font-size="20" fill="#2f2f2f" text-anchor="middle">act.</text>
+      <text x="279" y="-54" font-size="20" fill="#2f2f2f" text-anchor="middle">expert</text>
+
+      <!-- token arrows -->
+      <g stroke="#2f2f2f" stroke-width="1.4">
+        <line x1="23"  y1="-4" x2="23"  y2="-26" marker-end="url(#arr)"/>
+        <line x1="79"  y1="-4" x2="79"  y2="-26" marker-end="url(#arr)"/>
+        <line x1="135" y1="-4" x2="135" y2="-26" marker-end="url(#arr)"/>
+        <line x1="191" y1="-4" x2="191" y2="-26" marker-end="url(#arr)"/>
+        <line x1="279" y1="-4" x2="279" y2="-26" marker-end="url(#arr)"/>
+      </g>
+
+      <!-- tokens -->
+      <rect x="0" y="0" width="46" height="46" rx="6" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="23" y="32" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">o</text>
+      <rect x="56" y="0" width="46" height="46" rx="6" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="79" y="32" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">a</text>
+      <rect x="112" y="0" width="46" height="46" rx="6" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="135" y="32" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">o</text>
+      <rect x="168" y="0" width="46" height="46" rx="6" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="191" y="32" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">a</text>
+      <rect x="224" y="0" width="110" height="46" rx="6" fill="url(#hatch)" stroke="#2f2f2f" stroke-width="1.2"/>
+      <text x="279" y="31" font-size="19" fill="#2f2f2f" text-anchor="middle">Noised <tspan font-style="italic">a</tspan></text>
+    </g>
+  </defs>
+
+  <use href="#unit" x="64" y="286"/>
+  <use href="#unit" x="408" y="286"/>
+  <use href="#unit" x="752" y="286"/>
+</svg>

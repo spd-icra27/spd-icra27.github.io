@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-116 436 1038 246" font-family="Charter, Georgia, serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0.5 L 9 5 L 0 9.5 Z" fill="#2f2f2f"/>
+    </marker>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
+      <rect width="7" height="7" fill="#d5e4ef"/>
+      <line x1="0" y1="0" x2="0" y2="7" stroke="#ffffff" stroke-width="2.4"/>
+    </pattern>
+  </defs>
+
+  <rect x="64" y="520" width="214" height="76" rx="10" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="171" y="565" font-size="20" fill="#2f2f2f" text-anchor="middle">obs. expert</text>
+
+  <g stroke="#2f2f2f" stroke-width="1.4">
+    <line x1="87"  y1="626" x2="87"  y2="604" marker-end="url(#arr)"/>
+    <line x1="143" y1="626" x2="143" y2="604" marker-end="url(#arr)"/>
+    <line x1="199" y1="626" x2="199" y2="604" marker-end="url(#arr)"/>
+    <line x1="255" y1="626" x2="255" y2="604" marker-end="url(#arr)"/>
+  </g>
+  <rect x="64" y="630" width="46" height="46" rx="6" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="87" y="662" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">o</text>
+  <rect x="120" y="630" width="46" height="46" rx="6" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="143" y="662" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">a</text>
+  <rect x="176" y="630" width="46" height="46" rx="6" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="199" y="662" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">o</text>
+  <rect x="232" y="630" width="46" height="46" rx="6" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="255" y="662" font-size="24" font-style="italic" fill="#2f2f2f" text-anchor="middle">a</text>
+
+  <!-- KV cache midway between the experts so push and read match -->
+  <path d="M 395 520 L 395 588 A 60 14 0 0 0 515 588 L 515 520" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+  <ellipse cx="455" cy="520" rx="60" ry="14" fill="#f0f1f2" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="455" y="567" font-size="19" fill="#2f2f2f" text-anchor="middle">KV cache</text>
+
+  <line x1="285" y1="558" x2="388" y2="558" stroke="#2f2f2f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="340" y="544" font-size="17" fill="#2f2f2f" text-anchor="middle">push</text>
+  <line x1="522" y1="558" x2="625" y2="558" stroke="#2f2f2f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="570" y="544" font-size="17" fill="#2f2f2f" text-anchor="middle">read</text>
+  <line x1="455" y1="610" x2="455" y2="654" stroke="#2f2f2f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="477" y="638" font-size="17" fill="#2f2f2f">pop</text>
+
+  <rect x="632" y="520" width="110" height="76" rx="10" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="687" y="554" font-size="20" fill="#2f2f2f" text-anchor="middle">act.</text>
+  <text x="687" y="576" font-size="20" fill="#2f2f2f" text-anchor="middle">expert</text>
+
+  <line x1="687" y1="626" x2="687" y2="604" stroke="#2f2f2f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <rect x="632" y="630" width="110" height="46" rx="6" fill="url(#hatch)" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="687" y="661" font-size="19" fill="#2f2f2f" text-anchor="middle">Noised <tspan font-style="italic">a</tspan></text>
+
+  <line x1="687" y1="516" x2="687" y2="494" stroke="#2f2f2f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <rect x="632" y="442" width="110" height="46" rx="7" fill="#d5e4ef" stroke="#2f2f2f" stroke-width="1.2"/>
+  <text x="687" y="474" font-size="19" fill="#2f2f2f" text-anchor="middle">Future <tspan font-style="italic">a</tspan></text>
+</svg>

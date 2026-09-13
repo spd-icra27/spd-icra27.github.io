@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="main.css">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.png?v=2">
+    <title>Pre-training Visual Dexterity in Simulation</title>
+</head>
+<body>
+<nav class="side-nav" aria-label="Sections">
+    <ul>
+        <li><a href="#intro">Overview</a></li>
+        <li><a href="#sim-pretraining">Pre-training in Simulation</a></li>
+        <li><a href="#real-finetuning">Fine-tuning on Robot</a></li>
+        <li><a href="#architecture">Model</a></li>
+        <li><a href="#videos">Videos</a></li>
+        <li><a href="#experiments">Experiments</a></li>
+    </ul>
+</nav>
+<div id="title_slide">
+    <div class="title_left">
+        <h1>Pre-training Visual Dexterity <br> in Simulation</h1>
+        <div class="author-container-1" style="grid-template-columns: auto;">
+            <div class="grid-item"><span>Anonymous Authors</span></div>
+        </div>
+        <div class="mobile-author-container-1" style="grid-template-columns: auto;">
+            <div class="grid-item"><span>Anonymous Authors</span></div>
+        </div>
+
+        <div class="hero">
+            <video muted playsinline preload="metadata" poster="assets/posters/teaser.jpg">
+                <source src="assets/teaser.mp4" type="video/mp4">
+            </video>
+            <div class="vc-bar">
+                <button class="vc-btn vc-play" aria-label="Pause"></button>
+                <input class="vc-seek" type="range" min="0" max="1000" step="1" value="0" aria-label="Seek">
+                <button class="vc-btn vc-mute" aria-label="Unmute"></button>
+                <button class="vc-btn vc-fs" aria-label="Fullscreen"></button>
+            </div>
+        </div>
+        <script>
+            // Shared control icons (Material glyphs), used by the hero player
+            // and the carousel mute buttons.
+            window.VC_ICONS = {
+                play: '<svg viewBox="0 0 24 24"><path d="M8 5.14v13.72L19 12 8 5.14z"/></svg>',
+                pause: '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>',
+                unmuted: '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>',
+                muted: '<svg viewBox="0 0 24 24"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>',
+                fullscreen: '<svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>'
+            };
+            // Fullscreen with iPhone fallback (no element fullscreen API there)
+            window.vcFullscreen = function (v) {
+                if (v.requestFullscreen) { v.requestFullscreen(); }
+                else if (v.webkitEnterFullscreen) { v.webkitEnterFullscreen(); }
+                else if (v.webkitRequestFullscreen) { v.webkitRequestFullscreen(); }
+            };
+            // On touch devices controls hide by default; a tap reveals them
+            // for a few seconds (mirrors hover on laptops).
+            window.vcTapReveal = function (container) {
+                var timer;
+                container.addEventListener('touchstart', function () {
+                    container.classList.add('controls-visible');
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        container.classList.remove('controls-visible');
+                    }, 3000);
+                }, {passive: true});
+            };
+            (function () {
+                var hero = document.querySelector('.hero');
+                var v = hero.querySelector('video');
+                var playBtn = hero.querySelector('.vc-play');
+                var muteBtn = hero.querySelector('.vc-mute');
+                var fsBtn = hero.querySelector('.vc-fs');
+                var seek = hero.querySelector('.vc-seek');
+                var I = window.VC_ICONS;
+                fsBtn.innerHTML = I.fullscreen;
+                fsBtn.addEventListener('click', function () { window.vcFullscreen(v); });
+                window.vcTapReveal(hero);
+                function refresh() {
+                    playBtn.innerHTML = v.paused ? I.play : I.pause;
+                    playBtn.setAttribute('aria-label', v.paused ? 'Play' : 'Pause');
+                    muteBtn.innerHTML = v.muted ? I.muted : I.unmuted;
+                    muteBtn.setAttribute('aria-label', v.muted ? 'Unmute' : 'Mute');
+                }
+                playBtn.addEventListener('click', function () {
+                    if (v.paused) { v.play().catch(function () {}); } else { v.pause(); }
+                });
+                muteBtn.addEventListener('click', function () {
+                    v.muted = !v.muted;
+                    refresh();
+                });
+                v.addEventListener('play', refresh);
+                v.addEventListener('pause', refresh);
+                function showProgress() {
+                    if (!v.duration) return;
+                    var f = v.currentTime / v.duration;
+                    seek.value = Math.round(f * 1000);
+                    seek.style.setProperty('--vc-progress', (f * 100) + '%');
+                }
+                v.addEventListener('timeupdate', showProgress);
+                seek.addEventListener('input', function () {
+                    if (v.duration) v.currentTime = (seek.value / 1000) * v.duration;
+                    seek.style.setProperty('--vc-progress', (seek.value / 10) + '%');
+                });
+                // The markup carries no autoplay attribute (iOS starts
+                // parsed autoplay before scripts can cancel it); start
+                // playback here on non-touch devices only.
+                var isTouch = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+                    || navigator.maxTouchPoints > 1;
+                if (!isTouch) {
+                    v.play().catch(function () {});
+                }
+                refresh();
+                showProgress();
+            })();
+        </script>
+    </div>
+</div>
+<hr class="rounded">
+<div id="overview">
+
+    <p id="intro">
+    Large-scale pre-training has made robot policy fine-tuning increasingly data-efficient, but this progress has largely been driven by datasets and embodiments built around simple parallel-jaw grippers. Dexterous, multi-fingered hands remain comparatively data-starved because real teleoperation is costly to scale, while human hand video is off-embodiment and requires lossy pose estimation and retargeting. We introduce Simulation Pre-training for Dexterity (SPD), a pre-training framework for dexterous manipulation that uses data entirely collected in simulation: humans manipulate virtual objects inside a VR headset, enabling fast resets, parallel operation, and decentralized collection.
+    </p>
+    <p>
+    We pre-train a diffusion transformer policy on multi-task simulation demonstrations and study its benefits by fine-tuning on a small number of physical demonstrations on a 56-DoF bimanual dexterous setup. Across five real-world tasks, the pre-trained policy outperforms behavior cloning from scratch, showing that simulation teleoperation is a viable pre-training source for real-world dexterous manipulation.
+    </p>
+
+    <h1 id="sim-pretraining">Pre-training in Simulation</h1>
+
+    <p>
+    During collection, the operator controls the bimanual dexterous robot directly in a physics simulator. The headset tracks the operator's hands, which drive the robot's arms and fingers through inverse kinematics, and every hand-object contact is physically simulated. Because collection has no dependence on physical hardware, resets are instant and operators can collect data anywhere, in parallel. Five operators collected 75 hours of demonstrations over one week, spanning six scenes and hundreds of object instances. The tasks are long-horizon and open-ended: they specify the desired outcome without constraining strategy or subtask ordering, so the dataset captures many distinct ways of achieving each task.
+    </p>
+    <br>
+
+    <div class="image_container">
+        <img src="assets/sim_grid.jpg">
+        <div class="caption">
+            <p>Teleoperated demonstrations from spd-75h, spanning six simulated scenes.</p>
+        </div>
+    </div>
+
+    <h1 id="real-finetuning">Fine-tuning on Robot</h1>
+
+    <p>
+    After pre-training, we bring the policy to the real world with a short fine-tuning stage. For each task, we collect one to two hours of real demonstrations using a teleoperation system that mirrors the simulation setup, and fine-tune the full policy on them. This stage adapts the policy to real visual appearance, contact dynamics, and task-specific behavior.
+    </p>
+    <br>
+
+    <div class="video_container">
+        <video autoplay muted playsinline loop preload="metadata" poster="assets/posters/real_finetuning.jpg">
+            <source src="assets/videos/real_finetuning.mp4" type="video/mp4">
+        </video>
+        <div class="caption">
+            <p>Real-world teleoperation.</p>
+        </div>
+    </div>
+
+    <h1 id="architecture">Model</h1>
+
+    <p>
+    Our policy is a 222M-parameter diffusion transformer that predicts chunks of future actions from multi-view images and proprioception. Because our data lacks language annotations, the policy conditions on sensorimotor history rather than a language prompt. Each input sequence spans 256 timesteps at 30 Hz, roughly eight seconds of observations and actions, and this history helps the policy act through contact and occlusion.
+    </p>
+    <p>
+    Training over long histories is expensive, so the model denoises all action chunks in a sequence in parallel under a causal mask, amortizing the cost of processing the full context. Every layer uses sliding-window attention, which becomes a rolling KV cache at deployment. This keeps inference fast enough for the policy to run at 30 Hz with short, 8-step action chunks for reactive control.
+    </p>
+
+    <div class="image_container">
+        <img src="assets/arch_training.svg">
+        <div class="caption">
+            <p>Training: prefix-parallel with a causal sliding-window transformer.</p>
+        </div>
+    </div>
+
+    <div class="image_container">
+        <img src="assets/arch_inference.svg">
+        <div class="caption">
+            <p>Inference: asynchronous with a rolling KV cache.</p>
+        </div>
+    </div>
+
+    <h1 id="videos">Videos</h1>
+
+    <p>
+    We evaluate the fine-tuned policies on five bimanual tasks: racking plates, stacking cups, playing Jenga, hanging mugs, and tossing bottles into a bin. All videos below are autonomous rollouts.
+    </p>
+    <br>
+
+    <div class="carousel videos-carousel">
+        <button class="carousel-btn prev" aria-label="Previous">&#8249;</button>
+        <div class="carousel-track">
+            <figure class="carousel-slide">
+                <div class="vid-wrap">
+                    <video autoplay muted playsinline loop preload="metadata" poster="assets/posters/platerack.jpg">
+                        <source src="assets/videos/platerack.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <figcaption>Plate racking.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="vid-wrap">
+                    <video autoplay muted playsinline loop preload="metadata" poster="assets/posters/cupstack.jpg">
+                        <source src="assets/videos/cupstack.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <figcaption>Cup stacking.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="vid-wrap">
+                    <video autoplay muted playsinline loop preload="metadata" poster="assets/posters/jenga.jpg">
+                        <source src="assets/videos/jenga.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <figcaption>Jenga playing.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="vid-wrap">
+                    <video autoplay muted playsinline loop preload="metadata" poster="assets/posters/mugtree.jpg">
+                        <source src="assets/videos/mugtree.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <figcaption>Mug hanging.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="vid-wrap">
+                    <video autoplay muted playsinline loop preload="metadata" poster="assets/posters/bottles.jpg">
+                        <source src="assets/videos/bottles.mp4" type="video/mp4">
+                    </video>
+                </div>
+                <figcaption>Bottles in bin.</figcaption>
+            </figure>
+        </div>
+        <button class="carousel-btn next" aria-label="Next">&#8250;</button>
+        <div class="carousel-dots"></div>
+    </div>
+
+    <h1 id="experiments">Experiments</h1>
+
+    <p>
+    To measure the benefit of simulation pre-training, we compare against an identical policy trained from scratch on each task's real demonstrations. Pre-training helps on every task: the SPD policy makes more progress on average across all five, and its training loss starts and converges lower, which prior work finds to be correlated with real-world performance.
+    </p>
+
+    <div class="results-plot-wrap">
+        <div id="results-plot"></div>
+        <div class="caption">
+            <p>Average task progress on five real-world tasks. Error bars show standard error.</p>
+        </div>
+    </div>
+
+    <div class="carousel plots-carousel">
+        <button class="carousel-btn prev" aria-label="Previous">&#8249;</button>
+        <div class="carousel-track">
+            <figure class="carousel-slide">
+                <div class="loss-plot" id="loss-platerack"></div>
+                <figcaption>Training loss, plate racking.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="loss-plot" id="loss-cupstack"></div>
+                <figcaption>Training loss, cup stacking.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="loss-plot" id="loss-jenga"></div>
+                <figcaption>Training loss, Jenga playing.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="loss-plot" id="loss-mugtree"></div>
+                <figcaption>Training loss, mug hanging.</figcaption>
+            </figure>
+            <figure class="carousel-slide">
+                <div class="loss-plot" id="loss-bottles"></div>
+                <figcaption>Training loss, bottles in bin.</figcaption>
+            </figure>
+        </div>
+        <button class="carousel-btn next" aria-label="Next">&#8250;</button>
+        <div class="carousel-dots"></div>
+    </div>
+
+    <p>
+    We also ablate the sliding window size and the action chunk size. Prior works train with a single frame of context and a long, one-second action chunk, since short chunks make policies less temporally consistent. We observe the same effect: with a single frame of context, an 8-step chunk collapses performance. History conditioning removes this trade-off: with a 32-step window, the 8-step chunk outperforms every other variant, drawing temporal consistency from context and reactivity from the shorter chunk.
+    </p>
+
+    <div class="ablation-plot-wrap">
+        <div class="ablation-plots">
+            <div id="ablation-ft"></div>
+            <div id="ablation-scratch"></div>
+        </div>
+        <div class="ablation-legend">
+            <span><i style="background:#C44E52"></i><span class="lbl">window 1, chunk 8</span></span>
+            <span><i style="background:#DD8452"></i><span class="lbl">window 1, chunk 32 (&pi;<sub>0</sub> style)</span></span>
+            <span><i style="background:#55A868"></i><span class="lbl">window 32, chunk 32</span></span>
+            <span><i style="background:#4c81b6"></i><span class="lbl">window 32, chunk 8 (ours)</span></span>
+        </div>
+        <div class="caption">
+            <p>Per-task progress for each sliding window and action chunk variant.</p>
+        </div>
+    </div>
+
+</div>
+<script type="text/javascript">
+    /* https://stackoverflow.com/questions/3027707/how-to-change-the-playing-speed-of-videos-in-html5 */
+    document.querySelector('video').defaultPlaybackRate = 1.0;
+    document.querySelector('video').play();
+
+    var videos =document.querySelectorAll('video');
+    for (var i=0;i<1;i++)
+    {
+        videos[i].playbackRate = 1.0;
+    }
+</script>
+<script src="assets/plotly.min.js"></script>
+<script src="assets/results_fig.js"></script>
+<script src="assets/ablation_fig.js"></script>
+<script>
+    var plotConfig = {
+        responsive: true,
+        displayModeBar: false
+    };
+    Plotly.newPlot('results-plot', RESULTS_FIG.data, RESULTS_FIG.layout, plotConfig);
+    for (var task in LOSS_FIGS) {
+        Plotly.newPlot('loss-' + task, LOSS_FIGS[task].data, LOSS_FIGS[task].layout, plotConfig);
+    }
+    Plotly.newPlot('ablation-ft', ABLATION_FIGS.ft.data, ABLATION_FIGS.ft.layout, plotConfig);
+    Plotly.newPlot('ablation-scratch', ABLATION_FIGS.scratch.data, ABLATION_FIGS.scratch.layout, plotConfig);
+</script>
+<script>
+    // Carousels: scroll-snap track with arrows and dots
+    document.querySelectorAll('.carousel').forEach(function (carousel) {
+        var track = carousel.querySelector('.carousel-track');
+        var slides = carousel.querySelectorAll('.carousel-slide');
+        var dotsWrap = carousel.querySelector('.carousel-dots');
+        var dots = [];
+        // Mute/unmute and fullscreen buttons overlaid on each video slide
+        slides.forEach(function (slide) {
+            var wrap = slide.querySelector('.vid-wrap');
+            var v = slide.querySelector('video');
+            if (!wrap || !v) return;
+            var corner = document.createElement('div');
+            corner.className = 'vc-corner';
+            var muteBtn = document.createElement('button');
+            muteBtn.className = 'vc-btn';
+            muteBtn.innerHTML = window.VC_ICONS.muted;
+            muteBtn.setAttribute('aria-label', 'Unmute');
+            muteBtn.addEventListener('click', function () {
+                v.muted = !v.muted;
+                muteBtn.innerHTML = v.muted ? window.VC_ICONS.muted : window.VC_ICONS.unmuted;
+                muteBtn.setAttribute('aria-label', v.muted ? 'Unmute' : 'Mute');
+            });
+            var fsBtn = document.createElement('button');
+            fsBtn.className = 'vc-btn';
+            fsBtn.innerHTML = window.VC_ICONS.fullscreen;
+            fsBtn.setAttribute('aria-label', 'Fullscreen');
+            fsBtn.addEventListener('click', function () { window.vcFullscreen(v); });
+            corner.appendChild(muteBtn);
+            corner.appendChild(fsBtn);
+            wrap.appendChild(corner);
+            window.vcTapReveal(wrap);
+        });
+        slides.forEach(function (_, i) {
+            var dot = document.createElement('button');
+            dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+            dot.addEventListener('click', function () {
+                track.scrollTo({left: i * track.clientWidth, behavior: 'smooth'});
+            });
+            dotsWrap.appendChild(dot);
+            dots.push(dot);
+        });
+        function currentIndex() {
+            return Math.round(track.scrollLeft / track.clientWidth);
+        }
+        function update() {
+            var i = currentIndex();
+            dots.forEach(function (d, j) { d.classList.toggle('active', j === i); });
+            // Pause videos on non-visible slides; resume the visible one if
+            // it autoplays (on mobile autoplay is off, so nothing self-starts).
+            slides.forEach(function (slide, j) {
+                var v = slide.querySelector('video');
+                if (!v) return;
+                if (j === i) {
+                    if (v.autoplay && v.paused) v.play().catch(function () {});
+                } else if (!v.paused) {
+                    v.pause();
+                }
+            });
+        }
+        carousel.querySelector('.prev').addEventListener('click', function () {
+            track.scrollTo({left: (currentIndex() - 1) * track.clientWidth, behavior: 'smooth'});
+        });
+        carousel.querySelector('.next').addEventListener('click', function () {
+            track.scrollTo({left: (currentIndex() + 1) * track.clientWidth, behavior: 'smooth'});
+        });
+        track.addEventListener('scroll', update, {passive: true});
+        update();
+    });
+
+    // Pause carousel videos when they leave the viewport; muted autoplay
+    // videos resume when scrolled back into view.
+    if ('IntersectionObserver' in window) {
+        var videoObserver = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                var v = entry.target;
+                if (!entry.isIntersecting) {
+                    if (!v.paused) v.pause();
+                } else if (v.autoplay && v.muted && v.paused) {
+                    var slide = v.closest('.carousel-slide');
+                    var track = v.closest('.carousel-track');
+                    if (slide && track) {
+                        var idx = Array.prototype.indexOf.call(track.children, slide);
+                        if (idx !== Math.round(track.scrollLeft / track.clientWidth)) return;
+                    }
+                    v.play().catch(function () {});
+                }
+            });
+        }, {threshold: 0.25});
+        document.querySelectorAll('.carousel video').forEach(function (v) {
+            videoObserver.observe(v);
+        });
+    }
+</script>
+<script>
+    // Side-nav scroll spy
+    (function () {
+        var links = document.querySelectorAll('.side-nav a');
+        var targets = Array.prototype.map.call(links, function (a) {
+            return document.querySelector(a.getAttribute('href'));
+        });
+        function updateActive() {
+            var marker = window.innerHeight * 0.35;
+            var current = 0;
+            for (var i = 0; i < targets.length; i++) {
+                if (targets[i] && targets[i].getBoundingClientRect().top <= marker) current = i;
+            }
+            for (var j = 0; j < links.length; j++) {
+                links[j].classList.toggle('active', j === current);
+            }
+        }
+        window.addEventListener('scroll', updateActive, false);
+        window.addEventListener('resize', updateActive, false);
+        updateActive();
+    })();
+</script>
+</body>
+</html>
